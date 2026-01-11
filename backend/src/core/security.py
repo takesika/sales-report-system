@@ -2,13 +2,21 @@
 
 from datetime import UTC, datetime, timedelta
 
-from jose import jwt
+from jose import JWTError, jwt
 from passlib.context import CryptContext
+from pydantic import BaseModel
 
 from src.core.config import settings
 
 # パスワードハッシュ化設定
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+class TokenData(BaseModel):
+    """JWTトークンのペイロードデータ."""
+
+    salesperson_id: int | None = None
+    email: str | None = None
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -56,3 +64,25 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
         to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
     return encoded_jwt
+
+
+def decode_access_token(token: str) -> TokenData | None:
+    """JWTアクセストークンをデコードする.
+
+    Args:
+        token: JWTトークン
+
+    Returns:
+        デコードされたトークンデータ（無効な場合はNone）
+    """
+    try:
+        payload = jwt.decode(
+            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+        )
+        salesperson_id_str: str | None = payload.get("sub")
+        email: str | None = payload.get("email")
+        if salesperson_id_str is None:
+            return None
+        return TokenData(salesperson_id=int(salesperson_id_str), email=email)
+    except JWTError:
+        return None

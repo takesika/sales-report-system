@@ -1,13 +1,13 @@
 """認証API."""
 
-from fastapi import APIRouter, HTTPException, status
+from typing import Annotated
 
-from src.core.security import (
-    ACCESS_TOKEN_EXPIRE_SECONDS,
-    create_access_token,
-    verify_password,
-)
-from src.schemas.auth import LoginData, LoginRequest, LoginUser
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from src.core.config import settings
+from src.core.dependencies import CurrentUser, get_current_user
+from src.core.security import create_access_token, verify_password
+from src.schemas.auth import LoginData, LoginRequest, LoginUser, LogoutData
 from src.schemas.common import ErrorDetail, ErrorResponse, SuccessResponse
 
 router = APIRouter(prefix="/auth", tags=["認証"])
@@ -116,8 +116,38 @@ async def login(request: LoginRequest) -> SuccessResponse[LoginData]:
 
     login_data = LoginData(
         access_token=access_token,
-        expires_in=ACCESS_TOKEN_EXPIRE_SECONDS,
+        expires_in=settings.JWT_EXPIRE_SECONDS,
         user=login_user,
     )
 
     return SuccessResponse(data=login_data)
+
+
+@router.post(
+    "/logout",
+    response_model=SuccessResponse[LogoutData],
+    responses={
+        401: {"model": ErrorResponse, "description": "認証エラー"},
+    },
+    summary="ログアウト",
+    description="ログアウト処理を行う（トークンの無効化はクライアント側で実施）",
+)
+async def logout(
+    _current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> SuccessResponse[LogoutData]:
+    """ログアウト処理を行う.
+
+    JWTトークンの検証を行い、有効であればログアウト成功を返す。
+    実際のトークン無効化はクライアント側でトークンを破棄することで実現する。
+
+    Args:
+        _current_user: 現在のログインユーザー（認証検証用）
+
+    Returns:
+        ログアウト成功メッセージ
+    """
+    # 認証トークンの検証は get_current_user で実施済み
+    # JWTはステートレスなので、サーバー側でのトークン無効化は行わない
+    # クライアント側でトークンを破棄することでログアウトを実現
+
+    return SuccessResponse(data=LogoutData(message="ログアウトしました"))

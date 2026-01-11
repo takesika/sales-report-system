@@ -22,3 +22,9 @@ class ErrorResponse(BaseModel):
 
     success: bool = False
     error: ErrorDetail
+
+
+class MessageData(BaseModel):
+    """メッセージデータ."""
+
+    message: str

@@ -26,3 +26,9 @@ class LoginData(BaseModel):
     token_type: str = "Bearer"
     expires_in: int
     user: LoginUser
+
+
+class LogoutData(BaseModel):
+    """ログアウト成功時のデータ."""
+
+    message: str
