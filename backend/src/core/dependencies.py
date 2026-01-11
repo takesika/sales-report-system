@@ -1,8 +1,4 @@
-"""
-認証用Dependency
-
-FastAPIのDependency Injectionで使用する認証関連の依存関数を提供
-"""
+"""認証用Dependency."""
 
 from typing import Annotated
 
@@ -17,7 +13,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 class CurrentUser(BaseModel):
-    """現在のログインユーザー情報"""
+    """現在のログインユーザー情報."""
 
     salesperson_id: int
     email: str | None = None
@@ -29,11 +25,10 @@ class CurrentUser(BaseModel):
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
 ) -> CurrentUser:
-    """
-    現在のログインユーザーを取得する
+    """現在のログインユーザーを取得する.
 
-    JWTトークンを検証し、ユーザー情報を返す
-    トークンが無効な場合は401エラーを返す
+    JWTトークンを検証し、ユーザー情報を返す。
+    トークンが無効な場合は401エラーを返す。
 
     Args:
         token: Authorizationヘッダーから取得したJWTトークン
@@ -72,10 +67,9 @@ async def get_current_user(
 async def get_current_active_user(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> CurrentUser:
-    """
-    アクティブなログインユーザーを取得する
+    """アクティブなログインユーザーを取得する.
 
-    無効化されたユーザーの場合は401エラーを返す
+    無効化されたユーザーの場合は401エラーを返す。
 
     Args:
         current_user: 現在のログインユーザー
