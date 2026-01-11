@@ -1,0 +1,8 @@
+-- DropTable: DAILY_REPORT（日報テーブル）
+-- ロールバック用
+
+-- 外部キー制約を削除
+ALTER TABLE `DAILY_REPORT` DROP FOREIGN KEY `FK_DAILY_REPORT_SALESPERSON`;
+
+-- テーブルを削除
+DROP TABLE IF EXISTS `DAILY_REPORT`;
