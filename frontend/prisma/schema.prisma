@@ -1,0 +1,129 @@
+// 営業日報システム Prismaスキーマ
+// @docs/er-diagram.md を基に作成
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 営業担当者マスタ
+// 上長も同テーブルで管理し、manager_idで階層構造を表現
+model Salesperson {
+  salespersonId Int      @id @default(autoincrement()) @map("salesperson_id")
+  name          String   @db.VarChar(100)
+  email         String   @unique @db.VarChar(255)
+  passwordHash  String   @map("password_hash") @db.VarChar(255)
+  managerId     Int?     @map("manager_id")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // 自己参照リレーション（上長-部下）
+  manager      Salesperson?  @relation("ManagerSubordinate", fields: [managerId], references: [salespersonId])
+  subordinates Salesperson[] @relation("ManagerSubordinate")
+
+  // 日報リレーション
+  dailyReports   DailyReport[]
+  reportComments ReportComment[]
+
+  @@index([managerId], name: "IX_SALESPERSON_MANAGER")
+  @@map("SALESPERSON")
+}
+
+// 顧客マスタ
+model Customer {
+  customerId  Int      @id @default(autoincrement()) @map("customer_id")
+  companyName String   @map("company_name") @db.VarChar(200)
+  contactName String?  @map("contact_name") @db.VarChar(100)
+  phone       String?  @db.VarChar(20)
+  address     String?  @db.VarChar(500)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // 訪問記録リレーション
+  visitRecords VisitRecord[]
+
+  @@index([companyName], name: "IX_CUSTOMER_COMPANY_NAME")
+  @@index([isActive], name: "IX_CUSTOMER_IS_ACTIVE")
+  @@map("CUSTOMER")
+}
+
+// 日報ステータス
+enum ReportStatus {
+  draft     // 下書き - 編集可能、削除可能
+  submitted // 提出済 - 編集不可、上長確認待ち
+  confirmed // 確認済 - 上長が確認完了
+}
+
+// 日報テーブル
+// 営業担当者ごと・日付ごとに1レコード
+model DailyReport {
+  reportId      Int          @id @default(autoincrement()) @map("report_id")
+  salespersonId Int          @map("salesperson_id")
+  reportDate    DateTime     @map("report_date") @db.Date
+  problem       String?      @db.Text // 課題・相談事項（最大4000文字）
+  plan          String?      @db.Text // 明日の予定（最大4000文字）
+  status        ReportStatus @default(draft)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // リレーション
+  salesperson    Salesperson     @relation(fields: [salespersonId], references: [salespersonId])
+  visitRecords   VisitRecord[]
+  reportComments ReportComment[]
+
+  // 同一営業担当者が同じ日付の日報を複数作成不可
+  @@unique([salespersonId, reportDate], name: "UK_DAILY_REPORT_DATE")
+  @@index([reportDate], name: "IX_DAILY_REPORT_DATE")
+  @@index([status], name: "IX_DAILY_REPORT_STATUS")
+  @@map("DAILY_REPORT")
+}
+
+// 訪問記録テーブル
+// 1日報に対して複数の訪問記録を登録可能
+model VisitRecord {
+  visitId      Int      @id @default(autoincrement()) @map("visit_id")
+  reportId     Int      @map("report_id")
+  customerId   Int      @map("customer_id")
+  visitContent String   @map("visit_content") @db.Text // 活動内容（最大2000文字）
+  visitTime    DateTime? @map("visit_time") @db.Time()
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // リレーション
+  // 日報削除時はカスケード削除
+  dailyReport DailyReport @relation(fields: [reportId], references: [reportId], onDelete: Cascade)
+  // 顧客は参照がある場合は削除不可
+  customer    Customer    @relation(fields: [customerId], references: [customerId], onDelete: Restrict)
+
+  @@index([reportId], name: "IX_VISIT_RECORD_REPORT")
+  @@index([customerId], name: "IX_VISIT_RECORD_CUSTOMER")
+  @@map("VISIT_RECORD")
+}
+
+// 日報コメントテーブル
+// 上長や本人が複数コメントを投稿可能
+model ReportComment {
+  commentId   Int      @id @default(autoincrement()) @map("comment_id")
+  reportId    Int      @map("report_id")
+  commenterId Int      @map("commenter_id")
+  commentText String   @map("comment_text") @db.Text // コメント本文（最大2000文字）
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // リレーション
+  // 日報削除時はカスケード削除
+  dailyReport DailyReport @relation(fields: [reportId], references: [reportId], onDelete: Cascade)
+  // コメント者は参照がある場合は削除不可
+  commenter   Salesperson @relation(fields: [commenterId], references: [salespersonId], onDelete: Restrict)
+
+  @@index([reportId], name: "IX_REPORT_COMMENT_REPORT")
+  @@index([commenterId], name: "IX_REPORT_COMMENT_COMMENTER")
+  @@index([createdAt], name: "IX_REPORT_COMMENT_CREATED")
+  @@map("REPORT_COMMENT")
+}

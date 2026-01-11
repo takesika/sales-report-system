@@ -1,0 +1,5 @@
+# フロントエンドのテスト
+cd frontend && npm run test:run
+
+# バックエンドのテスト
+cd ../backend && uv run pytest
