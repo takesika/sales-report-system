@@ -1,0 +1,11 @@
+-- Rollback: REPORT_COMMENTテーブルの削除
+-- このファイルは手動ロールバック用です
+--
+-- 注意: 外部キー制約を先に削除してからテーブルを削除する必要があります
+
+-- 外部キー制約を削除
+ALTER TABLE `REPORT_COMMENT` DROP FOREIGN KEY `FK_REPORT_COMMENT_REPORT`;
+ALTER TABLE `REPORT_COMMENT` DROP FOREIGN KEY `FK_REPORT_COMMENT_COMMENTER`;
+
+-- テーブルを削除
+DROP TABLE IF EXISTS `REPORT_COMMENT`;
