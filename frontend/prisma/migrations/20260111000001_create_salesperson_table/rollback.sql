@@ -1,0 +1,8 @@
+-- Rollback: SALESPERSONテーブルの削除
+-- このファイルは手動ロールバック用です
+
+-- 外部キー制約を削除
+ALTER TABLE `SALESPERSON` DROP FOREIGN KEY `FK_SALESPERSON_MANAGER`;
+
+-- テーブルを削除
+DROP TABLE IF EXISTS `SALESPERSON`;
