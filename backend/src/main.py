@@ -3,6 +3,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.v1 import auth
+
 app = FastAPI(
     title="営業日報システム API",
     description="営業担当者が日々の顧客訪問活動を報告するシステム",
@@ -29,3 +31,7 @@ async def root() -> dict[str, str]:
 async def health_check() -> dict[str, str]:
     """APIヘルスチェック."""
     return {"status": "ok"}
+
+
+# APIルーターを登録
+app.include_router(auth.router, prefix="/api/v1")
